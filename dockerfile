@@ -1,14 +1,18 @@
-# Utilise une image officielle de PHP avec Apache
 FROM php:8.2-apache
 
-# Active l'extension PDO MySQL pour que PHP puisse parler à la base de données
-RUN docker-php-ext-install pdo pdo_mysql
+# Installation des dépendances et de l'extension PostgreSQL pour PHP
+RUN apt-get update && apt-get install -y libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copie tous les fichiers de ton projet dans le dossier du serveur Apache
+# Modification du port d'Apache pour s'adapter à Render (qui préfère souvent le port 8080 en interne)
+RUN sed -i 's/Listen 80/Listen 8080/g' /etc/apache2/ports.conf
+RUN sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:8080>/g' /etc/etc/apache2/sites-available/000-default.conf 2>/dev/null || sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:8080>/g' /etc/apache2/sites-enabled/000-default.conf
+
+# Copie des fichiers de l'application
 COPY . /var/www/html/
 
-# Donne les bonnes permissions aux fichiers
+# Attribution des droits à Apache
 RUN chown -R www-data:www-data /var/www/html/
 
-# Expose le port 80 pour le trafic web
-EXPOSE 80
+EXPOSE 8080
